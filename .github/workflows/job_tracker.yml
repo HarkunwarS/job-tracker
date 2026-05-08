@@ -1,0 +1,46 @@
+name: Ireland Tech Job Tracker v2
+
+on:
+  schedule:
+    - cron: "30 1 * * *"
+    - cron: "30 7 * * *"
+  workflow_dispatch:
+
+jobs:
+  track-jobs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Restore seen-jobs cache
+        uses: actions/cache@v4
+        with:
+          path: data/seen_jobs.json
+          key: seen-jobs-${{ github.run_id }}
+          restore-keys: |
+            seen-jobs-
+
+      - name: Run scraper
+        env:
+          EMAIL_SENDER:    ${{ secrets.EMAIL_SENDER }}
+          EMAIL_PASSWORD:  ${{ secrets.EMAIL_PASSWORD }}
+          EMAIL_RECIPIENT: ${{ secrets.EMAIL_RECIPIENT }}
+        run: python scraper.py
+
+      - name: Commit updated seen-jobs
+        run: |
+          git config user.name  "job-tracker-bot"
+          git config user.email "bot@github.com"
+          git add data/seen_jobs.json || true
+          git diff --staged --quiet || git commit -m "chore: update seen jobs [skip ci]"
+          git push || true
