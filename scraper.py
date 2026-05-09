@@ -1,10 +1,11 @@
 """
-Ireland Tech Job Tracker v2
+Ireland Tech Job Tracker v3
 ─────────────────────────────────────────────────────────────────────────────
 Sources:
-  1. Greenhouse ATS  — free public JSON API (no auth needed)
-  2. Lever ATS       — free public JSON API (no auth needed)
-  3. LinkedIn        — public job search (entry-level, Ireland, last 24 h)
+  1. Greenhouse ATS  — 60+ companies, free public JSON API (no auth needed)
+  2. Lever ATS       — 20+ companies, free public JSON API (no auth needed)
+  3. LinkedIn        — broad sweep for Google, Meta, Microsoft, Apple, Amazon
+                       and any company not on Greenhouse/Lever
 
 Runs on GitHub Actions twice a day. Sends one email digest of all new jobs.
 """
@@ -46,22 +47,118 @@ IRELAND_KEYWORDS = {"ireland", "dublin", "cork", "galway", "limerick", "waterfor
 #   - Add an entry below with the right ATS type and slug
 
 GREENHOUSE_COMPANIES = {
-    "Cloudflare":  "cloudflare",
-    "Workhuman":   "workhuman",
-    "Intercom":    "intercom",
-    "HubSpot":     "hubspot",
-    "MongoDB":     "mongodb",
-    "Tines":       "tines",
-    "Teamwork":    "teamwork",
-    "Indeed":      "indeed",
-    "Arctic Wolf": "arcticwolf",
-    "Shopify":     "shopify",
+    # ── Already tracked ───────────────────────────────────────────────────────
+    "Cloudflare":       "cloudflare",
+    "Workhuman":        "workhuman",
+    "Intercom":         "intercom",
+    "HubSpot":          "hubspot",
+    "MongoDB":          "mongodb",
+    "Tines":            "tines",
+    "Teamwork":         "teamwork",
+    "Indeed":           "indeed",
+    "Arctic Wolf":      "arcticwolf",
+    "Shopify":          "shopify",
+
+    # ── SaaS / Product ────────────────────────────────────────────────────────
+    "Zendesk":          "zendesk",
+    "Twilio":           "twilio",
+    "Figma":            "figma",
+    "Notion":           "notion",
+    "Canva":            "canva",
+    "Asana":            "asana",
+    "Airtable":         "airtable",
+    "Webflow":          "webflow",
+    "Loom":             "loom",
+    "Miro":             "miro",
+    "Typeform":         "typeform",
+    "Personio":         "personio",
+    "Phorest":          "phorest",
+
+    # ── Fintech / Payments ────────────────────────────────────────────────────
+    "Fenergo":          "fenergo",
+    "Wayflyer":         "wayflyer",
+    "Taxback":          "taxbackinternational",
+    "Fexco":            "fexco",
+    "Bitsika":          "bitsika",
+
+    # ── Cloud / DevOps / Infra ────────────────────────────────────────────────
+    "Datadog":          "datadog",
+    "HashiCorp":        "hashicorp",
+    "Grafana Labs":     "grafanalabs",
+    "PagerDuty":        "pagerduty",
+    "New Relic":        "newrelic",
+    "Snyk":             "snyk",
+    "Sysdig":           "sysdig",
+
+    # ── Cybersecurity ─────────────────────────────────────────────────────────
+    "Recorded Future":  "recordedfuture",
+    "Rapid7":           "rapid7",
+    "Tenable":          "tenable",
+    "Lacework":         "lacework",
+
+    # ── Data / AI / ML ────────────────────────────────────────────────────────
+    "Scale AI":         "scaleai",
+    "Weights & Biases": "wandb",
+    "Hugging Face":     "huggingface",
+    "Cohere":           "cohere",
+    "Celonis":          "celonis",
+    "ICON plc":         "iconplc",
+    "Optum":            "optum",
+
+    # ── Ireland-based / strong Dublin/Cork presence ───────────────────────────
+    "Vaultree":         "vaultree",
+    "Immedis":          "immedis",
+    "Siro":             "siro",
+    "Version 1":        "version1",
+    "Ergo":             "ergo",
+    "Learnosity":       "learnosity",
+    "Cubic Telecom":    "cubictelecom",
+    "Kitman Labs":      "kitmanlabs",
+
+    # ── Enterprise / Consulting with Greenhouse ───────────────────────────────
+    "Zendesk":          "zendesk",
+    "ServiceNow":       "servicenow",
+    "Workiva":          "workiva",
+    "Veeva Systems":    "veeva",
+    "Duck Creek":       "duckcreek",
 }
 
 LEVER_COMPANIES = {
-    "Stripe":   "stripe",
-    "Revolut":  "revolut",
-    "SAP":      "sap",
+    # ── Already tracked ───────────────────────────────────────────────────────
+    "Stripe":           "stripe",
+    "Revolut":          "revolut",
+    "SAP":              "sap",
+
+    # ── Big Tech with Lever ───────────────────────────────────────────────────
+    "Dropbox":          "dropbox",
+    "Reddit":           "reddit",
+    "Squarespace":      "squarespace",
+    "Netlify":          "netlify",
+
+    # ── Fintech ───────────────────────────────────────────────────────────────
+    "Klarna":           "klarna",
+    "Plaid":            "plaid",
+    "Wise":             "wise",
+    "Brex":             "brex",
+    "Checkout.com":     "checkout",
+
+    # ── SaaS / Product ────────────────────────────────────────────────────────
+    "Deel":             "deel",
+    "Remote":           "remote",
+    "Lattice":          "lattice",
+    "Culture Amp":      "cultureamp",
+    "Contentful":       "contentful",
+    "Lokalise":         "lokalise",
+
+    # ── Cloud / DevOps ────────────────────────────────────────────────────────
+    "DigitalOcean":     "digitalocean",
+    "Fastly":           "fastly",
+    "Aiven":            "aiven",
+
+    # ── Ireland / Europe presence ─────────────────────────────────────────────
+    "Workvivo":         "workvivo",
+    "Evervault":        "evervault",
+    "Swiftly":          "swiftly",
 }
 
 # LinkedIn keyword searches — covers companies whose careers pages are harder to scrape
@@ -82,6 +179,7 @@ LINKEDIN_QUERIES = [
     "cybersecurity analyst",
     "solutions architect",
     "product manager technology",
+    "NetApp Cork",
 ]
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
