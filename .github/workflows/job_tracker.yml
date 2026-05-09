@@ -1,34 +1,96 @@
-name: Ireland Tech Job Tracker v2
+name: Ireland Tech Job Tracker v4
 
 on:
   schedule:
-    - cron: "30 1 * * *"
-    - cron: "30 7 * * *"
+    - cron: "0 7 * * *"    # 8:00 AM Irish time (summer / UTC+1)
+    - cron: "0 17 * * *"   # 6:00 PM Irish time (summer / UTC+1)
+    - cron: "0 2 * * 0"      # discovery — Sunday 7:30 AM IST (weekly)
   workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Run mode'
+        required: false
+        default: 'scraper'
+        type: choice
+        options:
+          - scraper
+          - discovery
+          - both
 
 jobs:
-  track-jobs:
+
+  # ── Weekly company discovery ──────────────────────────────────────────────
+  discover:
     runs-on: ubuntu-latest
+    # Run on Sunday cron OR when manually triggered with mode=discovery/both
+    if: |
+      github.event_name == 'workflow_dispatch' && (
+        github.event.inputs.mode == 'discovery' ||
+        github.event.inputs.mode == 'both'
+      ) || (
+        github.event_name == 'schedule' &&
+        github.event.schedule == '0 2 * * 0'
+      )
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt
+
+      - name: Restore discovered companies cache
+        uses: actions/cache@v4
+        with:
+          path: data/discovered_companies.json
+          key: discovered-${{ github.run_id }}
+          restore-keys: discovered-
+
+      - name: Run company discovery
+        run: python discover_companies.py
+
+      - name: Commit updated company list
+        run: |
+          git config user.name  "job-tracker-bot"
+          git config user.email "bot@github.com"
+          git add data/discovered_companies.json || true
+          git diff --staged --quiet || git commit -m "chore: update discovered companies [skip ci]"
+          git push || true
+
+  # ── Daily job scraper ─────────────────────────────────────────────────────
+  scrape:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'schedule' && github.event.schedule != '0 2 * * 0' ||
+      github.event_name == 'workflow_dispatch' && (
+        github.event.inputs.mode == 'scraper' ||
+        github.event.inputs.mode == 'both'
+      )
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
 
       - name: Restore seen-jobs cache
         uses: actions/cache@v4
         with:
           path: data/seen_jobs.json
           key: seen-jobs-${{ github.run_id }}
-          restore-keys: |
-            seen-jobs-
+          restore-keys: seen-jobs-
+
+      - name: Restore discovered companies cache
+        uses: actions/cache@v4
+        with:
+          path: data/discovered_companies.json
+          key: discovered-${{ github.run_id }}
+          restore-keys: discovered-
 
       - name: Run scraper
         env:
