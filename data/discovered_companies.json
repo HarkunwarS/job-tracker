@@ -106,5 +106,17 @@
     "source": "builtin",
     "ats": "unknown",
     "slug": "56benefits"
+  },
+  "105 benefits": {
+    "name": "105 Benefits",
+    "source": "builtin",
+    "ats": "unknown",
+    "slug": "105benefits"
+  },
+  "99 benefits": {
+    "name": "99 Benefits",
+    "source": "builtin",
+    "ats": "unknown",
+    "slug": "99benefits"
   }
 }
